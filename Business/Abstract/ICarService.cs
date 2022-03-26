@@ -17,7 +17,9 @@ namespace Business.Abstract
         IDataResult<List<CarDetailDto>> GetCarDetails();
 
         IDataResult<CarDetailDto> GetCarDetail(int carId);
-
+        //transaction uygulamalarda tutarlılığı korumak için kullanılır 
+        //aynı anda iki tane vt işi var  birini yaptı diğerini yapamadı işlemi geri alması gerekiyo 
+        //bunun içinde transactionscope ekliyoruz managerda
         IResult TransactionalTest(Car car);
 
         IDataResult<int> GetCarTotalPrice(int carId, DateTime rentDate, DateTime returnDate);

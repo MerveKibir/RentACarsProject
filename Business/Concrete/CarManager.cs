@@ -1,5 +1,9 @@
 ﻿using Business.Abstract;
+using Business.BusinessAspects.Autofac;
 using Business.Constants;
+using Business.ValidationRules.FluentValidation;
+using Core.Aspects.Autofac.Caching;
+using Core.Aspects.Autofac.Validation;
 using Core.Utilities.Results;
 using DataAccess.Abstract;
 using Entities.Concrete;
@@ -7,6 +11,7 @@ using Entities.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Core.Aspects.Autofac.Transaction;
 using System.Linq;
 
 namespace Business.Concrete
@@ -17,12 +22,12 @@ namespace Business.Concrete
 
         public CarManager(ICarDal carDal)
         {
-            _carDal = carDal;
+            this._carDal = carDal;
         }
-        //güvenlik
-        //validation
-        //cache
-        
+
+        //[SecuredOperation("admin")]
+        [ValidationAspect(typeof(CarValidator))]
+        [CacheRemoveAspect("ICarService.Get")]
         public IResult Add(Car car)
         {
             try
@@ -36,7 +41,7 @@ namespace Business.Concrete
             }
         }
 
-        //tr
+        [TransactionScopeAspect]
         public IDataResult<Car> AddWithDetail(Car car)
         {
             _carDal.Add(car);
@@ -48,32 +53,32 @@ namespace Business.Concrete
             _carDal.Delete(car);
             return new SuccessResult(Messages.CarDeleted);
         }
-
+        [CacheAspect]
         public IDataResult<List<Car>> GetAll()
         {
             return new SuccessDataResult<List<Car>>(_carDal.GetAll(), Messages.CarListed);
         }
-
+        [CacheAspect]
         public IDataResult<Car> GetById(int id)
         {
             return new SuccessDataResult<Car>(_carDal.Get(c => c.Id == id), Messages.CarGot);
         }
-
+        [CacheAspect]
         public IDataResult<List<CarDetailDto>> GetCarByFilter(CarFilterDto carFilterDto)
         {
             return new SuccessDataResult<List<CarDetailDto>>(_carDal.GetCarDetailsByFilter(carFilterDto), "Filtrelenmiş arabalar getirildi");
         }
-
+        [CacheAspect]
         public IDataResult<CarDetailDto> GetCarDetail(int carId)
         {
             return new SuccessDataResult<CarDetailDto>(_carDal.GetCarDetails(c => c.CarId == carId).FirstOrDefault(), "Araba detayı getirildi");
         }
-
+        [CacheAspect]
         public IDataResult<List<CarDetailDto>> GetCarDetails()
         {
             return new SuccessDataResult<List<CarDetailDto>>(_carDal.GetCarDetails(), Messages.CarListedInDetail);
         }
-
+        [CacheAspect]
         public IDataResult<int> GetCarFindexScore(int carId)
         {
             IDataResult<CarDetailDto> carResult = this.GetCarDetail(carId);
@@ -83,17 +88,17 @@ namespace Business.Concrete
             }
             return new SuccessDataResult<int>(carResult.Data.FindexPuan, Messages.GetCarFindexScore);
         }
-
+        [CacheAspect]
         public IDataResult<List<CarDetailDto>> GetCarsByBrandId(string brand)
         {
             return new SuccessDataResult<List<CarDetailDto>>(_carDal.GetCarDetails(c => c.BrandName == brand), Messages.CarListedByBrand);
         }
-
+        [CacheAspect]
         public IDataResult<List<CarDetailDto>> GetCarsByColorId(string color)
         {
             return new SuccessDataResult<List<CarDetailDto>>(_carDal.GetCarDetails(c => c.ColorName == color), Messages.CarListedByColor);
         }
-
+        [CacheAspect]
         public IDataResult<int> GetCarTotalPrice(int carId, DateTime rentDate, DateTime returnDate)
         {
             IDataResult<Car> currentCarResult = this.GetById(carId);
@@ -106,17 +111,17 @@ namespace Business.Concrete
             int totalPrice = totalDays * currentCarResult.Data.DailyPrice;
             return new SuccessDataResult<int>(totalPrice);
         }
-
+        [CacheAspect]
         public IDataResult<int> GetTotalCarCount()
         {
             return new SuccessDataResult<int>(_carDal.GetTotalCarCount());
         }
 
-        //tr
+        [TransactionScopeAspect]
         public IResult TransactionalTest(Car car)
         {
             _carDal.Add(car);
-            if (car.DailyPrice < 1000000)
+            if (car.DailyPrice < 100)
             {
                 throw new Exception("hata");
             }
@@ -124,7 +129,8 @@ namespace Business.Concrete
             return new SuccessResult();
 
         }
-
+        [ValidationAspect(typeof(CarValidator))]
+        [CacheRemoveAspect("ICarService.Get")]
         public IResult Update(Car car)
         {
             _carDal.Update(car);

@@ -40,6 +40,7 @@ namespace Business.Concrete
             string filePath = ImageFileHelper.Upload(imageFile);
             carImage.ImagePath = filePath;
             carImage.Date = DateTime.Now;
+            // return new SuccessDataResult<CarImage>(carImage);
             return this.Add(carImage);
         }
 
@@ -47,6 +48,7 @@ namespace Business.Concrete
         public IResult Delete(CarImage carImage)
         {
             ImageFileHelper.Delete(carImage.ImagePath);
+            //return result;
             _carImageDal.Delete(carImage);
             return new SuccessResult(Messages.CarImageDeleted);
         }

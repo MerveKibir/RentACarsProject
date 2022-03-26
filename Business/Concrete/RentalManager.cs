@@ -1,5 +1,7 @@
 ﻿using Business.Abstract;
+using Business.Adapters.Abstract;
 using Business.Constants;
+using Core.Aspects.Autofac.Transaction;
 using Core.Utilities.Business;
 using Core.Utilities.Results;
 using DataAccess.Abstract;
@@ -14,10 +16,12 @@ namespace Business.Concrete
     public class RentalManager : IRentalService
     {
         private IRentalDal _rentalDal;
+        private IFindexScoreService _findexScoreService;
         private ICarService _carService;
-        public RentalManager(IRentalDal rentalDal, ICarService carService)
+        public RentalManager(IRentalDal rentalDal, IFindexScoreService findexScoreService, ICarService carService)
         {
             _rentalDal = rentalDal;
+            _findexScoreService = findexScoreService;
             _carService = carService;
         }
 
@@ -28,6 +32,29 @@ namespace Business.Concrete
 
         public IResult Rentalable(Rental rental)
         {
+            //Rental rental = new Rental
+            //{
+            //    CarId = paymentDto.CarId,
+            //    CustomerId = paymentDto.UserId,
+            //    RentDate = paymentDto.RentDate,
+            //    ReturnDate = paymentDto.ReturnDate
+            //};
+
+            IDataResult<int> carFindexScoreResult = _carService.GetCarFindexScore(rental.CarId);
+            IResult result = BusinessRules.Run(carFindexScoreResult, CheckRentCar(rental.CarId), CheckUserFindexScore(carFindexScoreResult.Data, rental.CustomerId));
+            if (result != null)
+            {
+                return result;
+            }
+
+            //IResult payResult = _paymentService.Pay(paymentDto, creditCardSave);
+            //if(!payResult.Success)
+            //{
+            //    return payResult;
+            //}
+
+            //this.Add(rental);
+
             return new SuccessResult();
         }
 
@@ -41,6 +68,16 @@ namespace Business.Concrete
             return new SuccessResult();
         }
 
+        public IResult CheckUserFindexScore(int minRequiredFindexScore, int userId)
+        {
+            int userFindexScore = _findexScoreService.GetUserFindexScore(userId);
+
+            if (userFindexScore < minRequiredFindexScore)
+            {
+                return new ErrorResult(Messages.UserFindexScoreInsufficient);
+            }
+            return new SuccessResult();
+        }
 
         public IResult Delete(Rental rental)
         {
@@ -68,6 +105,9 @@ namespace Business.Concrete
         {
             return new SuccessDataResult<List<RentalDetailDto>>(_rentalDal.rentalDetails(), "Araba kiraları listelendi");
         }
+
+
+
         public IResult Update(Rental rental)
         {
             _rentalDal.Update(rental);
